@@ -1,0 +1,60 @@
+import os
+import torch
+
+
+class BaseConfig:
+    def __init__(self, exp_name='fedavg_'):
+        self.EXP_NAME = exp_name
+
+        self.NETWORK = 'unet'
+        self.NETWORK_PARAMS = {'out_channels': 2}
+
+        self.DATASET = 'nuclei'
+        self.INNER_SITES = ['CoNSeP', 'CPM17', 'CryoNuSeg', 'TNBC']
+        self.OUTER_SITES = []
+        self.IMAGE_SIZE = [3, 384, 384]
+
+        self.TRAIN_ROUNDS = 200
+        self.TRAIN_EPOCH_PER_ROUND = 1
+        self.TRAIN_LR = 1e-3
+        self.TRAIN_BATCHSIZE = 8
+        self.TRAIN_MOMENTUM = 0.9
+        self.TRAIN_WEIGHT_DECAY = 1e-4
+        self.TRAIN_RESUME = False
+        self.TRAIN_AUTO_RESUME = False
+        self.TRAIN_GPU = 0
+        self.TRAIN_OPTIMIZER = 'adam'
+        self.TRAIN_WARMUP_STEPS = 1000
+        self.TRAIN_MIN_LR = 1e-5
+        self.TRAIN_MODE = 'federated'
+        self.TRAIN_LOSS = 'joint'
+
+        self.L_FIM = 1.0
+        self.FIM_METHOD = 'w2'
+        self.FIM_WARMUP = 10
+        self.FIM_RAMPUP = False
+
+        self.TRAIN_RATIO = 0.7
+        self.TEST_GPU = 0
+
+        self.METRIC = 'dice'
+
+        self.SEED = 0
+
+        self.COMM_TYPE = 'FedAvg'
+        self.CLIENT = 'BaseClient'
+
+        self.__check()
+
+    def __check(self):
+        if not torch.cuda.is_available():
+            raise ValueError('nuclei base config: cuda is not available')
+        self.DIR_DATA = os.environ.get('FEDCLAM_NUCLEI_DATA', '')
+        output_root = os.environ.get('FEDCLAM_OUTPUT_DIR', 'outputs')
+        self.DIR_SAVE = os.path.join(output_root, 'nuclei', self.EXP_NAME)
+        self.DIR_CKPT = os.path.join(self.DIR_SAVE, 'ckpt')
+        self.DIR_LOG = os.path.join(self.DIR_SAVE, 'log')
+
+        for path in [self.DIR_SAVE, self.DIR_CKPT]:
+            if not os.path.isdir(path):
+                os.makedirs(path)

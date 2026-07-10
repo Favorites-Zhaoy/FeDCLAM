@@ -1,0 +1,9 @@
+from .base import BaseConfig
+
+
+class Config(BaseConfig):
+    def __init__(self, exp_name='fedprox'):
+        super(Config, self).__init__(exp_name)
+        self.CLIENT = 'FedProxClient'
+        self.COMM_TYPE = 'FedAvg'
+        self.TRAIN_FEDPROX_MU = 1e-2
