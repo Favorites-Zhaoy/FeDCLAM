@@ -1,8 +1,11 @@
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import numpy as np
 import torch
 
+from pyfed.dataset.dataset import Fundus, Nuclei
 from pyfed.loss.loss import DiceFIMCELoss, DiceFIMLossFundus
 from pyfed.utils.metric import dice_func, dice_func_fundus
 from tools.prepare_datasets import normalize_fundus_mask, split_indices
@@ -38,6 +41,49 @@ class ReproductionTests(unittest.TestCase):
         prediction = torch.randn(2, 2, 32, 32)
         self.assertTrue(torch.isfinite(DiceFIMCELoss(lambda_fim=0.01)(prediction, prostate_target, image)))
         self.assertTrue(torch.isfinite(DiceFIMLossFundus(lambda_fim=0.01)(prediction, fundus_target, image)))
+
+    def test_fundus_valid_split_does_not_fall_back_to_test(self):
+        with TemporaryDirectory() as tmp:
+            site_dir = Path(tmp) / "siteA"
+            self._write_image_mask_split(site_dir, "train", count=10, fundus=True)
+            self._write_image_mask_split(site_dir, "test", count=3, fundus=True)
+
+            train_set = Fundus("siteA", tmp, train_ratio=0.6, split="train")
+            valid_set = Fundus("siteA", tmp, train_ratio=0.6, split="valid")
+            test_set = Fundus("siteA", tmp, train_ratio=0.6, split="test")
+
+            self.assertTrue(set(train_set.sample_paths).isdisjoint(valid_set.sample_paths))
+            self.assertTrue(set(valid_set.sample_paths).isdisjoint(test_set.sample_paths))
+            self.assertEqual(len(train_set), 6)
+            self.assertEqual(len(valid_set), 4)
+
+    def test_nuclei_valid_split_does_not_fall_back_to_test(self):
+        with TemporaryDirectory() as tmp:
+            site_dir = Path(tmp) / "siteB"
+            self._write_image_mask_split(site_dir, "train", count=10, fundus=False)
+            self._write_image_mask_split(site_dir, "test", count=3, fundus=False)
+
+            train_set = Nuclei("siteB", tmp, train_ratio=0.7, split="train")
+            valid_set = Nuclei("siteB", tmp, train_ratio=0.7, split="valid")
+            test_set = Nuclei("siteB", tmp, train_ratio=0.7, split="test")
+
+            self.assertTrue(set(train_set.sample_paths).isdisjoint(valid_set.sample_paths))
+            self.assertTrue(set(valid_set.sample_paths).isdisjoint(test_set.sample_paths))
+            self.assertEqual(len(train_set), 7)
+            self.assertEqual(len(valid_set), 3)
+
+    @staticmethod
+    def _write_image_mask_split(site_dir, split, count, fundus):
+        image_dir = site_dir / split / "image"
+        mask_dir = site_dir / split / "mask"
+        image_dir.mkdir(parents=True, exist_ok=True)
+        mask_dir.mkdir(parents=True, exist_ok=True)
+        for idx in range(count):
+            image = np.full((8, 8, 3), idx, dtype=np.uint8)
+            mask = np.zeros((8, 8), dtype=np.uint8)
+            mask[2:5, 2:5] = 2 if fundus else 1
+            np.save(image_dir / f"{idx:03d}.npy", image)
+            np.save(mask_dir / f"{idx:03d}.npy", mask)
 
 
 if __name__ == "__main__":

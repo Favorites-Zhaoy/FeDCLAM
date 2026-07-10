@@ -18,6 +18,39 @@ except ImportError:
     sitk = None
 
 
+def _image_paths_for_split(sitedir, split, valid_ratio=0.2):
+    """Return image paths without ever using test data as validation."""
+    if split not in ('train', 'valid', 'test'):
+        raise ValueError(f"Unsupported split: {split}")
+
+    split_dir = os.path.join(sitedir, split)
+    if split == 'test':
+        if not os.path.isdir(split_dir):
+            raise FileNotFoundError(f"Missing test split directory: {split_dir}")
+        return sorted(glob(f"{split_dir}/image/*.npy"))
+
+    if split == 'valid' and os.path.isdir(split_dir):
+        return sorted(glob(f"{split_dir}/image/*.npy"))
+
+    train_dir = os.path.join(sitedir, 'train')
+    if not os.path.isdir(train_dir):
+        raise FileNotFoundError(f"Missing train split directory: {train_dir}")
+
+    train_paths = sorted(glob(f"{train_dir}/image/*.npy"))
+    has_separate_valid = os.path.isdir(os.path.join(sitedir, 'valid'))
+    if split == 'train' and has_separate_valid:
+        return train_paths
+
+    if len(train_paths) <= 1:
+        return train_paths if split == 'train' else []
+
+    valid_count = int(round(valid_ratio * len(train_paths)))
+    valid_count = min(max(1, valid_count), len(train_paths) - 1)
+    if split == 'train':
+        return train_paths[:-valid_count]
+    return train_paths[-valid_count:]
+
+
 class Prostate(Dataset):
     def __init__(self, site, base_path, train_ratio=0.6, split='train', transform=None):
         channels = {'BIDMC': 3, 'HK': 3, 'I2CVB': 3, 'BMC': 3, 'RUNMC': 3, 'UCL': 3}
@@ -196,10 +229,8 @@ class Fundus(Dataset):
         self.images, self.labels = [], []
         sitedir = os.path.join(base_path, site)
         assert os.path.exists(sitedir)
-        train_or_test = split
-        if not os.path.isdir(os.path.join(sitedir, train_or_test)):
-            train_or_test = 'train' if split == 'train' else 'test'
-        image_paths = glob(f"{sitedir}/{train_or_test}/image/*.npy")
+        image_paths = _image_paths_for_split(sitedir, split, valid_ratio=1 - train_ratio)
+        self.sample_paths = image_paths
         for image_path in image_paths:
             image_path_obj = Path(image_path)
             mask_path = str(image_path_obj.parent.parent / 'mask' / image_path_obj.name)
@@ -237,10 +268,8 @@ class Nuclei(Dataset):
         self.images, self.labels = [], []
         sitedir = os.path.join(base_path, site)
         assert os.path.exists(sitedir)
-        split_name = split
-        if split == 'valid' and not os.path.isdir(os.path.join(sitedir, split_name)):
-            split_name = 'test'
-        image_paths = glob(f"{sitedir}/{split_name}/image/*.npy")
+        image_paths = _image_paths_for_split(sitedir, split, valid_ratio=1 - train_ratio)
+        self.sample_paths = image_paths
         for image_path in sorted(image_paths):
             image_path_obj = Path(image_path)
             mask_path = str(image_path_obj.parent.parent / 'mask' / image_path_obj.name)

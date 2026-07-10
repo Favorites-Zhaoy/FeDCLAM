@@ -40,9 +40,8 @@ def build_dataset(config, site):
         train_set = Fundus(
             site=site, base_path=config.DIR_DATA, split="train", transform=transform
         )
-        valid_split = "valid" if getattr(config, "PROTOCOL", "official") == "strict" else "test"
         valid_set = Fundus(
-            site=site, base_path=config.DIR_DATA, split=valid_split, transform=transform
+            site=site, base_path=config.DIR_DATA, split="valid", transform=transform
         )
         test_set = Fundus(
             site=site, base_path=config.DIR_DATA, split="test", transform=transform
