@@ -3,6 +3,37 @@ import torch.nn as nn
 import torch.nn.functional as F
 from monai.losses.hausdorff_loss import HausdorffDTLoss, LogHausdorffDTLoss
 
+class DeepSupervisionLoss(nn.Module):
+    def __init__(self, base_loss, weights=None, uses_image=False):
+        super(DeepSupervisionLoss, self).__init__()
+        self.base_loss = base_loss
+        self.weights = weights or [1.0, 0.5, 0.25]
+        self.uses_image = uses_image
+
+    def _resize_target(self, target, size):
+        if target.shape[-2:] == size:
+            return target
+        return F.interpolate(target.float(), size=size, mode='nearest')
+
+    def _resize_image(self, image, size):
+        if image is None or image.shape[-2:] == size:
+            return image
+        return F.interpolate(image, size=size, mode='bilinear', align_corners=False)
+
+    def forward(self, pred, gt, img=None):
+        outputs = pred if isinstance(pred, (list, tuple)) else (pred,)
+        total = 0.0
+        total_weight = 0.0
+        for idx, output in enumerate(outputs):
+            weight = self.weights[idx] if idx < len(self.weights) else self.weights[-1]
+            total_weight += weight
+            target = self._resize_target(gt, output.shape[-2:])
+            if self.uses_image:
+                image = self._resize_image(img, output.shape[-2:])
+                total = total + weight * self.base_loss(output, target, image)
+            else:
+                total = total + weight * self.base_loss(output, target)
+        return total / max(total_weight, 1e-8)
 
 class DiceLoss(nn.Module):
     def __init__(self, smooth=1e-5, include_background=True):

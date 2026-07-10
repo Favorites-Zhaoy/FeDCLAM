@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$Python = "C:\Users\Administrator\AppData\Local\Programs\Python\Python39\python.exe",
     [string]$ProcessedData = "D:\MLPractice\datasets\processed",
     [string]$OutputRoot = "D:\MLPractice\FedCLAM\outputs",
@@ -6,8 +6,7 @@ param(
     [string]$Dataset = "all",
     [string[]]$Methods = @("fedclam"),
     [switch]$Smoke,
-    [switch]$Resume,
-    [switch]$IncludeReleased
+    [switch]$Resume
 )
 
 $ErrorActionPreference = "Stop"
@@ -73,7 +72,7 @@ try {
                 Invoke-FedCLAMRun -DataName $dataName -Method $method -Protocol "strict"
             }
         }
-        if ($IncludeReleased -and $Dataset -in @("all", "prostate_mri")) {
+        if ($Dataset -in @("all", "prostate_mri")) {
             Invoke-FedCLAMRun -DataName "prostate_mri" -Method "fedclam" -Protocol "official" -Variant "released"
         }
     }

@@ -3,6 +3,7 @@ import shutil
 import csv
 import json
 import random
+import time
 
 import numpy as np
 import torch
@@ -508,7 +509,25 @@ class Manager(object):
                 save_dicts[f'optim_{ci}'] = client.client_to_server()['optimizer'].state_dict()
 
         latest_path = os.path.join(self.config.DIR_CKPT, 'model_latest.pth')
-        torch.save(save_dicts, latest_path)
+        tmp_path = latest_path + f'.tmp_{os.getpid()}'
+        try:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+            torch.save(save_dicts, tmp_path)
+            for attempt in range(3):
+                try:
+                    os.replace(tmp_path, latest_path)
+                    break
+                except PermissionError:
+                    if attempt == 2:
+                        raise
+                    time.sleep(1)
+        finally:
+            if os.path.exists(tmp_path):
+                try:
+                    os.remove(tmp_path)
+                except PermissionError:
+                    pass
         if better:
             shutil.copyfile(latest_path, os.path.join(self.config.DIR_CKPT, 'model_best.pth'))
 
@@ -545,8 +564,6 @@ class Manager(object):
             ax[1].set_title("OF")
             plt.legend()
             plt.savefig(os.path.join(self.config.DIR_LOG, "vlr_of.png"))
-
-
 
 
 

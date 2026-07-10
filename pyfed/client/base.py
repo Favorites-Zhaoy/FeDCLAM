@@ -20,8 +20,22 @@ class BaseClient(object):
         self.partition = partition
         self._setup()
 
+    def _primary_output(self, output):
+        if isinstance(output, (list, tuple)):
+            return output[0]
+        return output
+
+    def _loss_uses_image(self):
+        return bool(getattr(self.loss_fn, 'uses_image', False))
+
+    def _compute_loss(self, output, label, image=None):
+        if self._loss_uses_image():
+            return self.loss_fn(output, label, image)
+        return self.loss_fn(output, label)
+
     def _metric_update(self, output, label, metric_sum, sample_count):
         batch_size = int(label.shape[0])
+        output = self._primary_output(output)
         metric_sum += self.metric_fn(output.detach(), label.detach()) * batch_size
         sample_count += batch_size
         return metric_sum, sample_count
@@ -65,12 +79,7 @@ class BaseClient(object):
             self.optimizer.zero_grad()
             image, label = image.to(self.device), label.to(self.device)
             output = self.model(image)
-            loss = (
-                self.loss_fn(output, label)
-                if not 'FIM' in self.config.TRAIN_LOSS
-                else 
-                self.loss_fn(output, label, image)
-            )
+            loss = self._compute_loss(output, label, image)
             loss_all += loss.item()
 
             metric_sum, sample_count = self._metric_update(output, label, metric_sum, sample_count)
@@ -118,12 +127,7 @@ class BaseClient(object):
             for step, (image, label) in enumerate(self.valid_loader):
                 image, label = image.to(self.device), label.to(self.device)
                 output = model(image)
-                loss = (
-                self.loss_fn(output, label)
-                if not 'FIM' in self.loss_fn._get_name()
-                else 
-                self.loss_fn(output, label, image)
-                )
+                loss = self._compute_loss(output, label, image)
                 loss_all += loss.item()
 
                 metric_sum, sample_count = self._metric_update(output, label, metric_sum, sample_count)
@@ -150,12 +154,7 @@ class BaseClient(object):
             for step, (image, label) in enumerate(self.test_loader):
                 image, label = image.to(self.device), label.to(self.device)
                 output = model(image)
-                loss = (
-                    self.loss_fn(output, label)
-                    if not 'FIM' in self.loss_fn._get_name()
-                    else 
-                    self.loss_fn(output, label, image)
-                )
+                loss = self._compute_loss(output, label, image)
                 loss_all += loss.item()
 
                 metric_sum, sample_count = self._metric_update(output, label, metric_sum, sample_count)
@@ -176,3 +175,5 @@ class BaseClient(object):
 
     def save(self):
         pass
+
+

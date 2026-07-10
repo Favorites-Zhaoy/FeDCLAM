@@ -1,4 +1,5 @@
 from pyfed.network.unet import UNet, UNetFedfa
+from pyfed.network.resatt_unet import ResAttUNet
 
 from pyfed.client import (
     BaseClient,
@@ -17,6 +18,10 @@ def build_model(config):
         model = UNet(**config.NETWORK_PARAMS)
     elif config.NETWORK == 'unetfedfa':
         model = UNetFedfa(**config.NETWORK_PARAMS)
+    elif config.NETWORK == 'resattunet':
+        model = ResAttUNet(**config.NETWORK_PARAMS)
+    else:
+        raise ValueError('Unknown network: {}'.format(config.NETWORK))
     return model
 
 

@@ -183,17 +183,17 @@ try {
         -Lr "1e-4" `
         -BatchSize "16"
 
-    # Prostate FIM+CLAM with the paper-text parameters.
+    # Per user instruction, complete Prostate FIM+CLAM with the GitHub Prostate script parameters.
     Invoke-FedclamRun `
-        -Name "remaining_prostate_ablation_fim_clam_paper_seed0" `
+        -Name "remaining_prostate_ablation_fim_clam_githubparams_seed0" `
         -RuntimeDataset "prostate" `
         -DataPath $ProstateData `
-        -ExpName "ablation_fim_clam_paper" `
-        -RunNotes "paper_seed0" `
+        -ExpName "ablation_fim_clam_githubparams" `
+        -RunNotes "seed0" `
         -Config "config.prostate_mri.fedclam" `
         -Loss "diceFIMce" `
-        -Lfim "0.01" `
-        -FimWarmup "10" `
+        -Lfim "0.1" `
+        -FimWarmup "100" `
         -Lr "1e-4" `
         -BatchSize "16"
 

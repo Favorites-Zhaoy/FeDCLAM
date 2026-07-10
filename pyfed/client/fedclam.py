@@ -1,7 +1,7 @@
 import torch
 from pyfed.utils.clam_utils import calculate_of, calculate_vlr
 from .base import BaseClient
-from pyfed.manager.helper.build_loss import build_loss
+from pyfed.manager.helper.build_loss import build_loss, build_warmup_loss
 from pyfed.loss.loss import *
 
 
@@ -29,7 +29,7 @@ class FedCLAMClient(BaseClient):
             self.loss_fn = build_loss(self.config)
         else:
             if self.round < self.fim_warmup:
-                self.loss_fn = JointLoss() if "fundus" not in self.config.TRAIN_LOSS else DiceLossFundus()
+                self.loss_fn = build_warmup_loss(self.config)
             else:
                 self.loss_fn = build_loss(self.config)
 
@@ -46,12 +46,7 @@ class FedCLAMClient(BaseClient):
             self.optimizer.zero_grad()
             image, label = image.to(self.device), label.to(self.device)
             output = self.model(image)
-            loss = (
-                self.loss_fn(output, label)
-                if not 'FIM' in self.loss_fn._get_name()
-                else 
-                self.loss_fn(output, label, image)
-            )
+            loss = self._compute_loss(output, label, image)
             loss_all += loss.item()
             metric_sum, sample_count = self._metric_update(output, label, metric_sum, sample_count)
             loss.backward()
@@ -83,3 +78,5 @@ class FedCLAMClient(BaseClient):
                 'val_loss_ratio': self.val_loss_ratio,
                 'of_penalty': self.of_penalty,
                 }
+
+

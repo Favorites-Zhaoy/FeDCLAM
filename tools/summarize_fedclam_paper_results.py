@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import csv
 import json
@@ -35,13 +35,9 @@ PAPER_FEDCLAM = {
 
 
 def load_metrics(dataset: str) -> dict:
-    run_name = "fedclam_paper_seed0" if dataset == "fundus" else "fedclam_paperparams_clean2_seed0"
-    path = OUTPUT_ROOT / dataset / "official" / run_name / "log" / "metrics.npy"
+    path = OUTPUT_ROOT / dataset / "official" / "fedclam_paper_seed0" / "log" / "metrics.npy"
     if not path.exists():
-        raise FileNotFoundError(
-            f"Expected paper-parameter {dataset} metrics at {path}. "
-            "Run the clean paper-parameter experiment first."
-        )
+        raise FileNotFoundError(path)
     return np.load(path, allow_pickle=True).item()
 
 
@@ -297,20 +293,22 @@ def main() -> None:
         "",
         f"Fundus 的 best-val 平均 Dice 为 {summaries['fundus']['best_val']['test_avg']:.2f}%，论文平均为 {np.mean(PAPER_FEDCLAM['fundus']):.2f}%，差值 {fundus_delta:+.2f} 个百分点，按预设规则属于 1–3 个百分点的“偏差”范围。逐客户端看，Drishti-GS、REFUGE_t 与论文几乎一致，REFUGE_v 高于论文，RIM-ONE 明显偏低；总体平均的主要差异来自 RIM-ONE。",
         "",
-        f"Prostate 的 best-val 平均 Dice 为 {summaries['prostate']['best_val']['test_avg']:.2f}%，论文平均为 {np.mean(PAPER_FEDCLAM['prostate']):.2f}%，差值 {prostate_delta:+.2f} 个百分点。当前报告以 paper 参数 clean run 为准；若仍存在约 1 pp 差距，优先解释为 Prostate split manifest 未公开、BIDMC/BMC 测试病例组成差异和 checkpoint 选择口径不透明。",
+        f"Prostate 的 best-val 平均 Dice 为 {summaries['prostate']['best_val']['test_avg']:.2f}%，论文平均为 {np.mean(PAPER_FEDCLAM['prostate']):.2f}%，差值 {prostate_delta:+.2f} 个百分点，属于显著偏差。该结果在训练早期达到最好值后长期停留在约 49% Dice，说明当前 Prostate official 复现链路虽然能够完整训练和记录指标，但结果没有复现论文表 2 的 90%+ Dice 水平。",
         "",
         "需要强调：这里报告的是“当前代码、当前数据预处理和 official 口径下的可观测结果”。它能确认 Fundus official 口径存在 validation/test 重合风险，也能确认 Prostate 当前结果与论文差异巨大；但不能据此推断作者主观 cherry-pick 或动机。",
         "",
         "## 6. 建议的下一步排查",
         "",
-                "1. Prostate 主结果只采用 paper 参数：`λFIM=0.01, warm-up=10, alpha=1, beta=1`；GitHub `0.1/100` 仅保留为显式对照。",
-                "2. 对 BIDMC/BMC 生成 official split manifest 与 per-case Dice，确认差距是否由测试病例组成造成。",
+        "1. 优先排查 Prostate 标签语义和 Dice 计算：当前 Prostate Dice 约 0.49，形态上像是二分类前景/背景或标签通道处理存在系统性不一致。",
+        "2. 对照官方发布脚本参数再跑一次 Prostate：发布脚本疑似使用 `λFIM=0.1, warm-up=100`，而论文文字为 `λFIM=0.01, warm-up=10`。",
+        "3. 对 Prostate 运行单中心/集中式小实验，确认同一预处理数据在 U-Net 上是否能达到合理 Dice；如果集中式也停在 0.49，问题大概率在数据/标签/损失定义。",
+        "4. 若要写最终课程/论文复现报告，建议补跑 strict 无泄露 FedCLAM，和 official 结果分开呈现。",
         "",
         "## 7. 输出文件",
         "",
         f"- 汇总 CSV：`{md_rel(csv_path)}`",
         "- Fundus metrics：`outputs/fundus/official/fedclam_paper_seed0/log/metrics.npy`",
-        "- Prostate metrics：`outputs/prostate/official/fedclam_paperparams_clean2_seed0/log/metrics.npy`",
+        "- Prostate metrics：`outputs/prostate/official/fedclam_paper_seed0/log/metrics.npy`",
         "- 控制台日志：`outputs/console/fedclam_official_only_driver.out.log`",
         "",
     ]
