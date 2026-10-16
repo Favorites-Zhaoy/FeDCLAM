@@ -3,7 +3,7 @@
 [![Paper](http://img.shields.io/badge/Paper-MICCAI%202025-blue)](https://arxiv.org/abs/XXXX.XXXXX)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Official PyTorch implementation of our MICCAI 2025 spotlight paper **FedCLAM**.
+Unofficial PyTorch implementation of our MICCAI 2025 spotlight paper **FedCLAM**.
 ## Abstract
 > Federated learning is a decentralized training approach that keeps data under stakeholder control while achieving superior performance over isolated training. While inter-institutional feature discrepancies pose a challenge in all federated settings, medical imaging is particularly affected due to diverse imaging devices and population variances, which can diminish the global model's effectiveness. Existing aggregation methods generally fail to adapt across varied circumstances. To address this, we propose FedCLAM, which integrates **client-adaptive momentum** terms derived from each client's loss reduction during local training, as well as a **personalized dampening** factor to curb overfitting. We further introduce a novel **intensity alignment loss** that matches predicted and ground-truth foreground distributions to handle heterogeneous image intensity profiles across institutions and devices. Extensive evaluations on two datasets show that FedCLAM surpasses eight cutting-edge methods in medical segmentation tasks, underscoring its efficacy.
 
